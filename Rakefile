@@ -3,7 +3,7 @@ task :build => [:compile, :commit_build]
 
 desc "Build audio.js to audio.min.js"
 task :compile do
-  `closure --js=audiojs/audio.js --compilation_level=SIMPLE_OPTIMIZATIONS --js_output_file=audiojs/audio.min.js --warning_level=QUIET`
+  `uglifyjs -c -m -o audiojs/audio.min.js audiojs/audio.js`
 end
 
 task :commit_build do

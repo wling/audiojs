@@ -9,6 +9,9 @@
       var path = scripts[i].getAttribute('src');
       if(re.test(path)) return path.replace(re, '');
     }
+
+    // Bundler strips out names of individual scripts so just return the path
+    return '/Scripts/libs/audiojs/';
   })();
   
   // ##The audiojs interface
@@ -36,9 +39,14 @@
       preload: true,
       imageLocation: path + 'player-graphics.gif',
       swfLocation: path + 'audiojs.swf',
+      audioWidth: 300,
       useFlash: (function() {
         var a = document.createElement('audio');
-        return !(a.canPlayType && a.canPlayType('audio/mpeg;').replace(/no/, ''));
+        var ua = window.navigator.userAgent.toLowerCase();
+        var isFirefox = (ua.match(/firefox/gi) !== null);
+
+        // Force Flash for Firefox 28 MP3 decoding
+        return !(a.canPlayType && ((a.canPlayType('audio/mpeg;').replace(/no/, '') && !isFirefox) || a.canPlayType('audio/mpeg;').replace(/no|maybe/, '')));
       })(),
       hasFlash: (function() {
         if (navigator.plugins && navigator.plugins.length && navigator.plugins['Shockwave Flash']) {
@@ -54,6 +62,16 @@
         }
         return false;
       })(),
+      // Return the scrubber width depending on set width
+      getScrubberWidth: function() {
+        var width = this.audioWidth - 150;
+        return (width < 0 ? 0 : width) + 'px';
+      },
+      // Return the error message width depending on set width
+      getErrorMessageWidth: function() {
+        var width = this.audioWidth - 47;
+        return (width < 0 ? 0 : width) + 'px';
+      },
       // The default markup and classes for creating the player:
       createPlayer: {
         markup: '\
@@ -86,25 +104,25 @@
       // The css used by the default player. This is is dynamically injected into a `<style>` tag in the top of the head.
       css: '\
         .audiojs audio { position: absolute; left: -1px; } \
-        .audiojs { width: 460px; height: 36px; background: #404040; overflow: hidden; font-family: monospace; font-size: 12px; \
+        .audiojs { width: $4px; height: 30px; background: #404040; overflow: hidden; font-family: monospace; font-size: 12px; \
           background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #444), color-stop(0.5, #555), color-stop(0.51, #444), color-stop(1, #444)); \
           background-image: -moz-linear-gradient(center top, #444 0%, #555 50%, #444 51%, #444 100%); \
           -webkit-box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.3); -moz-box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.3); \
           -o-box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.3); box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.3); } \
-        .audiojs .play-pause { width: 25px; height: 40px; padding: 4px 6px; margin: 0px; float: left; overflow: hidden; border-right: 1px solid #000; } \
-        .audiojs p { display: none; width: 25px; height: 40px; margin: 0px; cursor: pointer; } \
+        .audiojs .play-pause { width: 26px; height: 30px; padding: 0px; margin: 0px; float: left; overflow: hidden; border-right: 1px solid #000; } \
+        .audiojs p { display: none; width: 25px; height: 30px; margin: 0px; cursor: pointer; } \
         .audiojs .play { display: block; } \
-        .audiojs .scrubber { position: relative; float: left; width: 280px; background: #5a5a5a; height: 14px; margin: 10px; border-top: 1px solid #3f3f3f; border-left: 0px; border-bottom: 0px; overflow: hidden; } \
+        .audiojs .scrubber { position: relative; float: left; width: $2; background: #5a5a5a; height: 14px; margin: 8px; border-top: 1px solid #3f3f3f; border-left: 0px; border-bottom: 0px; overflow: hidden; } \
         .audiojs .progress { position: absolute; top: 0px; left: 0px; height: 14px; width: 0px; background: #ccc; z-index: 1; \
           background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #ccc), color-stop(0.5, #ddd), color-stop(0.51, #ccc), color-stop(1, #ccc)); \
           background-image: -moz-linear-gradient(center top, #ccc 0%, #ddd 50%, #ccc 51%, #ccc 100%); } \
         .audiojs .loaded { position: absolute; top: 0px; left: 0px; height: 14px; width: 0px; background: #000; \
           background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #222), color-stop(0.5, #333), color-stop(0.51, #222), color-stop(1, #222)); \
           background-image: -moz-linear-gradient(center top, #222 0%, #333 50%, #222 51%, #222 100%); } \
-        .audiojs .time { float: left; height: 36px; line-height: 36px; margin: 0px 0px 0px 6px; padding: 0px 6px 0px 12px; border-left: 1px solid #000; color: #ddd; text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5); } \
+        .audiojs .time { float: left; height: 30px; line-height: 30px; margin: 0px; padding: 0px 6px 0px 12px; border-left: 1px solid #000; color: #ddd; text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5); } \
         .audiojs .time em { padding: 0px 2px 0px 0px; color: #f9f9f9; font-style: normal; } \
         .audiojs .time strong { padding: 0px 0px 0px 2px; font-weight: normal; } \
-        .audiojs .error-message { float: left; display: none; margin: 0px 10px; height: 36px; width: 400px; overflow: hidden; line-height: 36px; white-space: nowrap; color: #fff; \
+        .audiojs .error-message { float: left; display: none; margin: 0px 10px; height: 30px; width: $3; overflow: hidden; line-height: 30px; white-space: nowrap; color: #fff; \
           text-overflow: ellipsis; -o-text-overflow: ellipsis; -icab-text-overflow: ellipsis; -khtml-text-overflow: ellipsis; -moz-text-overflow: ellipsis; -webkit-text-overflow: ellipsis; } \
         .audiojs .error-message a { color: #eee; text-decoration: none; padding-bottom: 1px; border-bottom: 1px solid #999; white-space: wrap; } \
         \
@@ -206,6 +224,8 @@
           instances = []
           options = options || {};
       for (var i = 0, ii = audioElements.length; i < ii; i++) {
+        if ((" " + audioElements[i].parentNode.className + " ").replace(/[\n\t]/g, " ").indexOf(" audiojs ") > -1)
+          continue;
         instances.push(this.newInstance(audioElements[i], options));
       }
       return instances;
@@ -238,6 +258,7 @@
       if (s.css) this.helpers.injectCss(audio, s.css);
 
       // If `<audio>` or mp3 playback isn't supported, insert the swf & attach the required events for it.
+      
       if (s.useFlash && s.hasFlash) {
         this.injectFlash(audio, id);
         this.attachFlashEvents(audio.wrapper, audio);
@@ -314,6 +335,14 @@
         audio.trackEnded.apply(audio);
       });
 
+      container[audiojs].events.addListener(audio.element, 'play', function(e) {
+        audio.trackPlay.apply(audio);
+      });
+
+      container[audiojs].events.addListener(audio.element, 'pause', function(e) {
+        audio.trackPause.apply(audio);
+      });
+
       container[audiojs].events.addListener(audio.source, 'error', function(e) {
         // on error, cancel any load timers that are running.
         clearInterval(audio.readyTimer);
@@ -331,6 +360,7 @@
         audio.mp3 = mp3;
         if (audio.swfReady) audio.element.load(mp3);
       }
+      
       audio['loadProgress'] = function(percent, duration) {
         audio.loadedPercent = percent;
         audio.duration = duration;
@@ -338,31 +368,36 @@
         audio.settings.loadProgress.apply(audio, [percent]);
       }
       audio['skipTo'] = function(percent) {
-        if (percent > audio.loadedPercent) return;
-        audio.updatePlayhead.call(audio, [percent])
-        audio.element.skipTo(percent);
+      
+          if (percent > audio.loadedPercent) return;
+          audio.updatePlayhead.call(audio, [percent])
+          audio.element.skipTo(percent);
+   
       }
       audio['updatePlayhead'] = function(percent) {
         audio.settings.updatePlayhead.apply(audio, [percent]);
       }
       audio['play'] = function() {
-        // If the audio hasn't started preloading, then start it now.  
-        // Then set `preload` to `true`, so that any tracks loaded in subsequently are loaded straight away.
-        if (!audio.settings.preload) {
-          audio.settings.preload = true;
-          audio.element.init(audio.mp3);
-        }
-        audio.playing = true;
-        // IE doesn't allow a method named `play()` to be exposed through `ExternalInterface`, so lets go with `pplay()`.  
-        // <http://dev.nuclearrooster.com/2008/07/27/externalinterfaceaddcallback-can-cause-ie-js-errors-with-certain-keyworkds/>
-        audio.element.pplay();
-        audio.settings.play.apply(audio);
+      
+          // If the audio hasn't started preloading, then start it now.  
+          // Then set `preload` to `true`, so that any tracks loaded in subsequently are loaded straight away.
+          if (!audio.settings.preload) {
+            audio.settings.preload = true;
+            audio.element.init(audio.mp3);
+          }
+          audio.playing = true;
+          // IE doesn't allow a method named `play()` to be exposed through `ExternalInterface`, so lets go with `pplay()`.  
+          // <http://dev.nuclearrooster.com/2008/07/27/externalinterfaceaddcallback-can-cause-ie-js-errors-with-certain-keyworkds/>
+          audio.element.pplay();
+          audio.settings.play.apply(audio);
+          audio.trackPlay.apply(audio);
       }
       audio['pause'] = function() {
         audio.playing = false;
         // Use `ppause()` for consistency with `pplay()`, even though it isn't really required.
         audio.element.ppause();
         audio.settings.pause.apply(audio);
+        audio.trackPause.apply(audio);
       }
       audio['setVolume'] = function(v) {
         audio.element.setVolume(v);
@@ -372,6 +407,7 @@
         audio.swfReady = true;
         if (audio.settings.preload) audio.element.init(audio.mp3);
         if (audio.settings.autoplay) audio.play.apply(audio);
+        
       }
     },
 
@@ -427,6 +463,10 @@
             styles = document.getElementsByTagName('style'),
             css = string.replace(/\$1/g, audio.settings.imageLocation);
 
+        css = css.replace(/\$4/g, audio.settings.audioWidth);
+        css = css.replace(/\$2/g, audio.settings.getScrubberWidth());
+        css = css.replace(/\$3/g, audio.settings.getErrorMessageWidth());
+    
         for (var i = 0, ii = styles.length; i < ii; i++) {
           var title = styles[i].getAttribute('title');
           if (title && ~title.indexOf('audiojs')) {
@@ -614,6 +654,10 @@
       this.element.load();
       this.mp3 = mp3;
       container[audiojs].events.trackLoadProgress(this);
+      // Remove the error because we load the next audio
+      container[audiojs].helpers.removeClass(this.wrapper,
+                                             this.settings.createPlayer.errorClass);
+
     },
     loadError: function() {
       this.settings.loadError.apply(this);
@@ -672,6 +716,14 @@
       this.skipTo.apply(this, [0]);
       if (!this.settings.loop) this.pause.apply(this);
       this.settings.trackEnded.apply(this);
+    },
+    // event handler for play
+    trackPlay: function(e) {
+
+    },
+    // event handler for pause
+    trackPause: function(e) {
+
     }
   }
 
