@@ -1,3 +1,5 @@
+// https://github.com/wling/audiojs
+// (Forked from http://kolber.github.com/audiojs)
 // A cross-browser javascript shim for html5 audio
 (function(audiojs, audiojsInstance, container) {
   // Use the path to the audio.js file to create relative paths to the swf and player graphics
